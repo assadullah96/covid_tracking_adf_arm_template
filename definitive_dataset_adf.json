@@ -1,0 +1,1331 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": "Data Factory name",
+            "defaultValue": "datafactoryname"
+        },
+        "storageAccountName": {
+             "type": "string",
+             "defaultValue": "storageaccountname",
+             "metadata": {
+             "description": "Name of the Azure storage account that contains the input/output data."
+             }
+        },
+
+        "location": {
+             "type": "string",
+             "defaultValue": "[resourceGroup().location]",
+             "metadata": {
+             "description": "Location of the data factory. Currently, only East US, East US 2, and West Europe are supported."
+            }
+         },
+        "restService_url": {
+            "type": "string",
+            "defaultValue": "https://services7.arcgis.com/LXCny1HyhQCUSueu/arcgis/rest/services/Definitive_Healthcare_USA_Hospital_Beds/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+        }
+    },
+    "variables": {
+        "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]",
+        "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+
+    },
+    "resources": [
+
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                 "name": "Standard_LRS"
+                },
+            "kind": "StorageV2",
+            "properties": {}
+       },
+ 
+
+       {
+            "type": "Microsoft.DataFactory/factories",
+            "apiVersion": "2018-06-01",
+            "name": "[parameters('factoryName')]",
+            "location": "[parameters('location')]",
+            "properties": {},
+            "identity": {
+                "type": "SystemAssigned"
+                 }
+        },
+
+
+
+        {
+            "name": "[concat(parameters('factoryName'), '/source_csv_dataset')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureBlobStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "directory": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "type": "string"
+                    },
+                    "container": {
+                        "type": "string"
+                    }
+                },
+                "folder": {
+                    "name": "Parameterized"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "fileName": {
+                            "value": "@dataset().file",
+                            "type": "Expression"
+                        },
+                        "folderPath": {
+                            "value": "@dataset().directory",
+                            "type": "Expression"
+                        },
+                        "container": {
+                            "value": "@dataset().container",
+                            "type": "Expression"
+                        }
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/csv_sinkonly_dataset')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureBlobStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "directory": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "type": "string"
+                    },
+                    "container": {
+                        "type": "string"
+                    }
+                },
+                "folder": {
+                    "name": "Parameterized"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "folderPath": {
+                            "value": "@dataset().directory",
+                            "type": "Expression"
+                        },
+                        "container": {
+                            "value": "@dataset().container",
+                            "type": "Expression"
+                        }
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/parquet_dataset')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureBlobStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "container": {
+                        "type": "string"
+                    },
+                    "directory": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "type": "string"
+                    }
+                },
+                "folder": {
+                    "name": "Parameterized"
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "folderPath": {
+                            "value": "@dataset().directory",
+                            "type": "Expression"
+                        },
+                        "container": {
+                            "value": "@dataset().container",
+                            "type": "Expression"
+                        }
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/json_dataset')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureBlobStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "container": {
+                        "type": "string"
+                    },
+                    "directory": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "type": "string"
+                    }
+                },
+                "folder": {
+                    "name": "Parameterized"
+                },
+                "annotations": [],
+                "type": "Json",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "fileName": {
+                            "value": "@dataset().file",
+                            "type": "Expression"
+                        },
+                        "folderPath": {
+                            "value": "@dataset().directory",
+                            "type": "Expression"
+                        },
+                        "container": {
+                            "value": "@dataset().container",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "schema": {}
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/Covid_dataset')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "using rest api",
+                "linkedServiceName": {
+                    "referenceName": "RestService1",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "relativeUrl": {
+                        "type": "string"
+                    }
+                },
+                "folder": {
+                    "name": "Sources"
+                },
+                "annotations": [],
+                "type": "RestResource",
+                "typeProperties": {
+                    "relativeUrl": {
+                        "value": "@dataset().relativeUrl",
+                        "type": "Expression"
+                    }
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/linkedServices/RestService1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/Covid_Tracking')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Covid Tracking (Cases/Deaths): https://covidtracking.com/api/v1/states/daily.json",
+                "activities": [
+                    {
+                        "name": "To Raw Partition",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "RestSource",
+                                "httpRequestTimeout": "00:01:40",
+                                "requestInterval": "00.00:00:00.010",
+                                "requestMethod": "GET"
+                            },
+                            "sink": {
+                                "type": "DelimitedTextSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageWriteSettings"
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextWriteSettings",
+                                    "quoteAllText": true,
+                                    "fileExtension": ".txt"
+                                }
+                            },
+                            "enableStaging": false,
+                            "translator": {
+                                "type": "TabularTranslator",
+                                "mappings": [
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['OBJECTID']"
+                                        },
+                                        "sink": {
+                                            "name": "OBJECTID",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HOSPITAL_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "HOSPITAL_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HOSPITAL_TYPE']"
+                                        },
+                                        "sink": {
+                                            "name": "HOSPITAL_TYPE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ADDRESS']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ADDRESS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ADDRESS1']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ADDRESS1",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_CITY']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_CITY",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_STATE']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_STATE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ZIP_CODE']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ZIP_CODE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['COUNTY_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "COUNTY_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['STATE_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "STATE_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['STATE_FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "STATE_FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['CNTY_FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "CNTY_FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_LICENSED_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_LICENSED_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_STAFFED_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_STAFFED_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_ICU_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['ADULT_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "ADULT_ICU_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['PEDI_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "PEDI_ICU_BEDS",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['BED_UTILIZATION']"
+                                        },
+                                        "sink": {
+                                            "name": "BED_UTILIZATION",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['Potential_Increase_In_Bed_Capac']"
+                                        },
+                                        "sink": {
+                                            "name": "Potential_Increase_In_Bed_Capac",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['AVG_VENTILATOR_USAGE']"
+                                        },
+                                        "sink": {
+                                            "name": "AVG_VENTILATOR_USAGE",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['geometry']['x']"
+                                        },
+                                        "sink": {
+                                            "name": "x",
+                                            "type": "Double"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['geometry']['y']"
+                                        },
+                                        "sink": {
+                                            "name": "y",
+                                            "type": "Double"
+                                        }
+                                    }
+                                ],
+                                "collectionReference": "$['features']",
+                                "mapComplexValuesToString": true
+                            }
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "Covid_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "relativeUrl": {
+                                        "value": "@pipeline().parameters.sourceRelativeUrl",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "source_csv_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.rawBlobDirectory,'/',formatDateTime(utcnow(),'yyyy/MM/dd'))",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@concat(pipeline().parameters.sourceFilename,'_',pipeline().RunId,'.csv')",
+                                        "type": "Expression"
+                                    },
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "name": "To Raw Overwrite",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "RestSource",
+                                "httpRequestTimeout": "00:01:40",
+                                "requestInterval": "00.00:00:00.010",
+                                "requestMethod": "GET"
+                            },
+                            "sink": {
+                                "type": "DelimitedTextSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageWriteSettings"
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextWriteSettings",
+                                    "quoteAllText": true,
+                                    "fileExtension": ".txt"
+                                }
+                            },
+                            "enableStaging": false,
+                            "translator": {
+                                "type": "TabularTranslator",
+                                "mappings": [
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['OBJECTID']"
+                                        },
+                                        "sink": {
+                                            "name": "OBJECTID",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HOSPITAL_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "HOSPITAL_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HOSPITAL_TYPE']"
+                                        },
+                                        "sink": {
+                                            "name": "HOSPITAL_TYPE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ADDRESS']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ADDRESS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ADDRESS1']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ADDRESS1",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_CITY']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_CITY",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_STATE']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_STATE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['HQ_ZIP_CODE']"
+                                        },
+                                        "sink": {
+                                            "name": "HQ_ZIP_CODE",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['COUNTY_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "COUNTY_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['STATE_NAME']"
+                                        },
+                                        "sink": {
+                                            "name": "STATE_NAME",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['STATE_FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "STATE_FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['CNTY_FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "CNTY_FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['FIPS']"
+                                        },
+                                        "sink": {
+                                            "name": "FIPS",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_LICENSED_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_LICENSED_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_STAFFED_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_STAFFED_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['NUM_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "NUM_ICU_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['ADULT_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "ADULT_ICU_BEDS",
+                                            "type": "Int64"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['PEDI_ICU_BEDS']"
+                                        },
+                                        "sink": {
+                                            "name": "PEDI_ICU_BEDS",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['BED_UTILIZATION']"
+                                        },
+                                        "sink": {
+                                            "name": "BED_UTILIZATION",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['Potential_Increase_In_Bed_Capac']"
+                                        },
+                                        "sink": {
+                                            "name": "Potential_Increase_In_Bed_Capac",
+                                            "type": "String"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['attributes']['AVG_VENTILATOR_USAGE']"
+                                        },
+                                        "sink": {
+                                            "name": "AVG_VENTILATOR_USAGE",
+                                            "type": "Single"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['geometry']['x']"
+                                        },
+                                        "sink": {
+                                            "name": "x",
+                                            "type": "Double"
+                                        }
+                                    },
+                                    {
+                                        "source": {
+                                            "path": "[['geometry']['y']"
+                                        },
+                                        "sink": {
+                                            "name": "y",
+                                            "type": "Double"
+                                        }
+                                    }
+                                ],
+                                "collectionReference": "$['features']",
+                                "mapComplexValuesToString": true
+                            }
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "Covid_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "relativeUrl": {
+                                        "value": "@pipeline().parameters.sourceRelativeUrl",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "source_csv_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.rawBlobDirectory, '/latest')",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@pipeline().parameters.sourceFilename",
+                                        "type": "Expression"
+                                    },
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "name": "CovidTracking_Dataset",
+                        "description": "Covid Tracking\nhttps://services7.arcgis.com/LXCny1HyhQCUSueu/arcgis/rest/services/Definitive_Healthcare_USA_Hospital_Beds/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json",
+                        "type": "ExecuteDataFlow",
+                        "dependsOn": [
+                            {
+                                "activity": "To Raw Overwrite",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            },
+                            {
+                                "activity": "To Raw Partition",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "dataflow": {
+                                "referenceName": "CovidTracking_Dataset",
+                                "type": "DataFlowReference",
+                                "parameters": {
+                                    "filename": {
+                                        "value": "'@{pipeline().parameters.filename}'",
+                                        "type": "Expression"
+                                    },
+                                    "runid": {
+                                        "value": "'@{pipeline().RunId}'",
+                                        "type": "Expression"
+                                    }
+                                },
+                                "datasetParameters": {
+                                    "SourceCSV": {
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.rawBlobDirectory, '/latest')",
+                                            "type": "Expression"
+                                        },
+                                        "file": {
+                                            "value": "@pipeline().parameters.sourceFilename",
+                                            "type": "Expression"
+                                        },
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        }
+                                    },
+                                    "SinkParquet": {
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        },
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/',formatdatetime(utcnow(),'yyyy/MM/dd'))",
+                                            "type": "Expression"
+                                        },
+                                        "file": "specified in data flow"
+                                    },
+                                    "SinkLatestParquet": {
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        },
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                            "type": "Expression"
+                                        },
+                                        "file": "specified in data flow"
+                                    },
+                                    "sinkJsonl": {
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        },
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/',formatdatetime(utcnow(),'yyyy/MM/dd'))",
+                                            "type": "Expression"
+                                        },
+                                        "file": "specified in data flow"
+                                    },
+                                    "sinkCSV": {
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/',formatdatetime(utcnow(),'yyyy/MM/dd'))",
+                                            "type": "Expression"
+                                        },
+                                        "file": "specified in data flow",
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        }
+                                    },
+                                    "sinkLatestCSV": {
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                            "type": "Expression"
+                                        },
+                                        "file": {
+                                            "value": "@concat(pipeline().parameters.filename,'.csv')",
+                                            "type": "Expression"
+                                        },
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        }
+                                    },
+                                    "sinkLatestJsonl": {
+                                        "container": {
+                                            "value": "@pipeline().parameters.blobContainer",
+                                            "type": "Expression"
+                                        },
+                                        "directory": {
+                                            "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                            "type": "Expression"
+                                        },
+                                        "file": {
+                                            "value": "@concat(pipeline().parameters.filename,'.jsonl')",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            },
+                            "staging": {},
+                            "compute": {
+                                "coreCount": 8,
+                                "computeType": "General"
+                            },
+                            "traceLevel": "Fine"
+                        }
+                    },
+                    {
+                        "name": "JSONL to JSON LATEST",
+                        "type": "Copy",
+                        "dependsOn": [
+                            {
+                                "activity": "CovidTracking_Dataset",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "JsonSource",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageReadSettings",
+                                    "recursive": true
+                                },
+                                "formatSettings": {
+                                    "type": "JsonReadSettings"
+                                }
+                            },
+                            "sink": {
+                                "type": "JsonSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageWriteSettings"
+                                },
+                                "formatSettings": {
+                                    "type": "JsonWriteSettings"
+                                }
+                            },
+                            "enableStaging": false
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    },
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@concat(pipeline().parameters.filename,'.jsonl')",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    },
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@concat(pipeline().parameters.filename,'.json')",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "name": "JSONL to JSON",
+                        "type": "Copy",
+                        "dependsOn": [
+                            {
+                                "activity": "CovidTracking_Dataset",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "JsonSource",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageReadSettings",
+                                    "recursive": true
+                                },
+                                "formatSettings": {
+                                    "type": "JsonReadSettings"
+                                }
+                            },
+                            "sink": {
+                                "type": "JsonSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageWriteSettings"
+                                },
+                                "formatSettings": {
+                                    "type": "JsonWriteSettings"
+                                }
+                            },
+                            "enableStaging": false
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    },
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/latest')",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@concat(pipeline().parameters.filename,'.jsonl')",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "container": {
+                                        "value": "@pipeline().parameters.blobContainer",
+                                        "type": "Expression"
+                                    },
+                                    "directory": {
+                                        "value": "@concat(pipeline().parameters.curatedBlobDirectory,'/',formatdatetime(utcnow(),'yyyy/MM/dd'))",
+                                        "type": "Expression"
+                                    },
+                                    "file": {
+                                        "value": "@concat(pipeline().parameters.filename,'_',pipeline().RunId,'.json')",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "parameters": {
+                    "sourceFilename": {
+                        "type": "string",
+                        "defaultValue": "states_daily_4pm_et.csv"
+                    },
+                    "sourceRelativeUrl": {
+                        "type": "string"
+                    },
+                    "blobContainer": {
+                        "type": "string",
+                        "defaultValue": "public"
+                    },
+                    "rawBlobDirectory": {
+                        "type": "string",
+                        "defaultValue": "raw/covid-19/covid_tracking"
+                    },
+                    "curatedBlobDirectory": {
+                        "type": "string",
+                        "defaultValue": "curated/covid-19/covid_tracking"
+                    },
+                    "filename": {
+                        "type": "string",
+                        "defaultValue": "covid_tracking"
+                    }
+                },
+                "folder": {
+                    "name": "Case Data"
+                },
+                "annotations": [],
+                "lastPublishTime": "2020-11-25T14:41:31Z"
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/datasets/Covid_dataset')]",
+                "[concat(variables('factoryId'), '/datasets/source_csv_dataset')]",
+                "[concat(variables('factoryId'), '/dataflows/CovidTracking_Dataset')]",
+                "[concat(variables('factoryId'), '/datasets/json_dataset')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/RestService1')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "RestService",
+                "typeProperties": {
+                    "url": "[parameters('restService_url')]",
+                    "enableServerCertificateValidation": true,
+                    "authenticationType": "Anonymous"
+                }
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]"
+
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/AzureBlobStorage1')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureBlobStorage",
+                "typeProperties": {
+                    "connectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(variables('storageAccountId'), '2019-06-01').keys[0].value)]"
+                }
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/CovidTracking_Dataset')]",
+            "type": "Microsoft.DataFactory/factories/dataflows",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "type": "MappingDataFlow",
+                "typeProperties": {
+                    "sources": [
+                        {
+                            "dataset": {
+                                "referenceName": "source_csv_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "SourceCSV"
+                        }
+                    ],
+                    "sinks": [
+                        {
+                            "dataset": {
+                                "referenceName": "parquet_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "SinkParquet"
+                        },
+                        {
+                            "dataset": {
+                                "referenceName": "parquet_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "SinkLatestParquet"
+                        },
+                        {
+                            "dataset": {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "sinkJsonl"
+                        },
+                        {
+                            "dataset": {
+                                "referenceName": "csv_sinkonly_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "sinkCSV"
+                        },
+                        {
+                            "dataset": {
+                                "referenceName": "csv_sinkonly_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "sinkLatestCSV"
+                        },
+                        {
+                            "dataset": {
+                                "referenceName": "json_dataset",
+                                "type": "DatasetReference"
+                            },
+                            "name": "sinkLatestJsonl"
+                        }
+                    ],
+                    "transformations": [
+                        {
+                            "name": "AddColumns",
+                            "description": "add load date and time"
+                        },
+                        {
+                            "name": "ModifyHeadings",
+                            "description": "Capitalize first letter of each word and give underscore between space"
+                        },
+                        {
+                            "name": "RearrangeColumns",
+                            "description": "Rearrange columns Row_Id, Load_Date, Load_Time, Longitude and Latitude as first  five columns"
+                        },
+                        {
+                            "name": "RoundOfFColumns",
+                            "description": "Round off Latitude and Longitude upto 3 decimal points"
+                        }
+                    ],
+                    "script": "parameters{\n\tfilename as string ('covid_tracking'),\n\trunid as string ('runtime_guid')\n}\nsource(output(\n\t\tOBJECTID as short,\n\t\tHOSPITAL_NAME as string,\n\t\tHOSPITAL_TYPE as string,\n\t\tHQ_ADDRESS as string,\n\t\tHQ_ADDRESS1 as string,\n\t\tHQ_CITY as string,\n\t\tHQ_STATE as string,\n\t\tHQ_ZIP_CODE as integer,\n\t\tCOUNTY_NAME as string,\n\t\tSTATE_NAME as string,\n\t\tSTATE_FIPS as short,\n\t\tCNTY_FIPS as short,\n\t\tFIPS as integer,\n\t\tNUM_LICENSED_BEDS as short,\n\t\tNUM_STAFFED_BEDS as short,\n\t\tNUM_ICU_BEDS as short,\n\t\tADULT_ICU_BEDS as short,\n\t\tPEDI_ICU_BEDS as short,\n\t\tBED_UTILIZATION as double,\n\t\tPotential_Increase_In_Bed_Capac as short,\n\t\tAVG_VENTILATOR_USAGE as short,\n\t\tx as double,\n\t\ty as double\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tinferDriftedColumnTypes: true) ~> SourceCSV\nSourceCSV derive(load_date = currentDate('UTC'),\n\t\tload_time = currentUTC('yyyy-MM-dd')) ~> AddColumns\nAddColumns select(mapColumn(\n\t\tRow_Id = OBJECTID,\n\t\tHospital_Name = HOSPITAL_NAME,\n\t\tHospital_Type = HOSPITAL_TYPE,\n\t\tHq_Address = HQ_ADDRESS,\n\t\tHq_Address1 = HQ_ADDRESS1,\n\t\tHq_City = HQ_CITY,\n\t\tHq_State = HQ_STATE,\n\t\tHQ_Zip_Code = HQ_ZIP_CODE,\n\t\tCountry_Name = COUNTY_NAME,\n\t\tState_Name = STATE_NAME,\n\t\tCnty_Fips = CNTY_FIPS,\n\t\tState_Fips = STATE_FIPS,\n\t\tFips = FIPS,\n\t\tNum_Licensed_Beds = NUM_LICENSED_BEDS,\n\t\tNum_Staffed_Beds = NUM_STAFFED_BEDS,\n\t\tNum_Icu_Beds = NUM_ICU_BEDS,\n\t\tAdult_Icu_Beds = ADULT_ICU_BEDS,\n\t\tPedi_Icu_Beds = PEDI_ICU_BEDS,\n\t\tBed_Utilization = BED_UTILIZATION,\n\t\tPotential_Increase_In_Bed_Capac,\n\t\tAvg_Ventilator_Usage = AVG_VENTILATOR_USAGE,\n\t\tLongitude = x,\n\t\tLatitude = y,\n\t\tLoad_Date = load_date,\n\t\tLoad_Time = load_time\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ModifyHeadings\nModifyHeadings select(mapColumn(\n\t\tRow_Id,\n\t\tLoad_Date,\n\t\tLoad_Time,\n\t\tLongitude,\n\t\tLatitude,\n\t\tHospital_Name,\n\t\tHospital_Type,\n\t\tHq_Address,\n\t\tHq_Address1,\n\t\tHq_City,\n\t\tHq_State,\n\t\tHQ_Zip_Code,\n\t\tCountry_Name,\n\t\tState_Name,\n\t\tCnty_Fips,\n\t\tState_Fips,\n\t\tFips,\n\t\tNum_Licensed_Beds,\n\t\tNum_Staffed_Beds,\n\t\tNum_Icu_Beds,\n\t\tAdult_Icu_Beds,\n\t\tPedi_Icu_Beds,\n\t\tPotential_Increase_In_Bed_Capac,\n\t\tBed_Utilization,\n\t\tAvg_Ventilator_Usage\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> RearrangeColumns\nRearrangeColumns derive(Longitude = round(Longitude, 3),\n\t\tLatitude = round(Latitude, 3)) ~> RoundOfFColumns\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tpartitionFileNames:[(concat($filename,'_', $runid,'.parquet'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SinkParquet\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tpartitionFileNames:[(concat($filename, '.parquet'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SinkLatestParquet\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat($filename,'_', $runid,'.jsonl'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> sinkJsonl\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat($filename,'_', $runid,'.csv'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> sinkCSV\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat($filename, '.csv'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> sinkLatestCSV\nRoundOfFColumns sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat($filename, '.jsonl'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> sinkLatestJsonl"
+                }
+            },
+            "dependsOn": [
+                "[parameters('storageAccountName')]",
+                "[parameters('factoryName')]",
+                "[concat(variables('factoryId'), '/datasets/source_csv_dataset')]",
+                "[concat(variables('factoryId'), '/datasets/parquet_dataset')]",
+                "[concat(variables('factoryId'), '/datasets/json_dataset')]",
+                "[concat(variables('factoryId'), '/datasets/csv_sinkonly_dataset')]"
+            ]
+        }
+    ]
+}
